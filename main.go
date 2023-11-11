@@ -2,7 +2,6 @@ package main
 
 import (
 	"ProjectX/network"
-	"fmt"
 	"time"
 )
 
@@ -15,7 +14,7 @@ func main() {
 
 	go func() {
 		for {
-			msg := []byte("Hello shhhhhh")
+			msg := []byte("Hello Local")
 			trRemote.SendMessage(trLocal.Addr(), msg)
 			time.Sleep(1 * time.Second)
 		}
@@ -28,5 +27,4 @@ func main() {
 	s := network.NewServer(opts)
 
 	s.Start()
-	fmt.Println("dddd")
 }
