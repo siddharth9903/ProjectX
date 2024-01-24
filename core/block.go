@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"io"
 )
 
 type Header struct {
@@ -77,11 +76,11 @@ func (b *Block) AddTransaction(tx *Transaction) {
 	b.Transactions = append(b.Transactions, *tx);
 }
 
-func (b *Block) Encode(w io.Writer,enc Encoder[*Block]) error{
-	return enc.Encode(w, b)
+func (b *Block) Encode(enc Encoder[*Block]) error{
+	return enc.Encode(b)
 }
-func (b *Block) Decode(r io.Reader,dec Decoder[*Block]) error{
-	return dec.Decode(r, b)
+func (b *Block) Decode(dec Decoder[*Block]) error{
+	return dec.Decode(b)
 }
 
 func (b *Block) Hash(hasher Hasher[*Header]) types.Hash {

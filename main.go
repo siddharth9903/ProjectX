@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ProjectX/crypto"
 	"ProjectX/network"
 	"time"
 )
@@ -20,8 +21,10 @@ func main() {
 		}
 	}()
 
+	Pk := crypto.GeneratePrivateKey()
 	opts := network.ServerOpts{
 		Transports: []network.Transport{trLocal},
+		PrivateKey : &Pk,
 	}
 
 	s := network.NewServer(opts)

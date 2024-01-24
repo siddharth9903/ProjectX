@@ -40,7 +40,7 @@ func TestAddBlock(t *testing.T) {
 	for i := 0; i < lenBlocks; i++ {
 		prevHash := getPreviousBlockHash(t, bc, uint32(i+1));
 
-		b := randomBlockWithSignature(uint32(i+1),prevHash)
+		b := randomBlockWithSignature(t, uint32(i+1),prevHash)
 		err := bc.AddBlock(b);
 		assert.Nil(t, err);
 

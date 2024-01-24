@@ -18,18 +18,18 @@ func randomBlock(height uint32, prevBlockHash types.Hash) *Block {
 		Height: height,
 	}
 
-	b := NewBlock(header,[]Transaction{});
-	tx := randomTxWithSignature();
-	b.AddTransaction(tx)
 
-	return b
+	return NewBlock(header, []Transaction{})
 }
 
-func randomBlockWithSignature(height uint32, prevBlockHash types.Hash) *Block {
+func randomBlockWithSignature(t *testing.T, height uint32, prevBlockHash types.Hash) *Block {
 	privKey := crypto.GeneratePrivateKey()
 
 	b := randomBlock(height, prevBlockHash)
-	b.Sign(privKey)
+	tx := randomTxWithSignature(t)
+	b.AddTransaction(tx)
+	assert.Nil(t, b.Sign(privKey))
+
 	return b
 }
 
