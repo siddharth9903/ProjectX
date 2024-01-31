@@ -3,6 +3,7 @@ package network
 import (
 	"ProjectX/core"
 	"ProjectX/crypto"
+	"bytes"
 	"fmt"
 	"time"
 
@@ -13,6 +14,8 @@ type ServerOpts struct {
 	Transports []Transport
 	PrivateKey *crypto.PrivateKey
 	BlockTime time.Duration
+	RPCDecodeFunc RPCDecodeFunc
+	RPCProcessor RPCProcessor
 }
 
 const DefaultBlockTime time.Duration= 5 * time.Second;
@@ -31,7 +34,11 @@ func NewServer(opts ServerOpts) *Server {
 		opts.BlockTime = DefaultBlockTime
 	}
 
-	return &Server{
+	if opts.RPCDecodeFunc == nil {
+		opts.RPCDecodeFunc = DefaultRPCDecodeFunc
+	}
+
+	s := &Server{
 		ServerOpts: opts,
 		blockTime: opts.BlockTime,
 		isValidator: opts.PrivateKey != nil,
@@ -39,6 +46,12 @@ func NewServer(opts ServerOpts) *Server {
 		rpcChan:    make(chan RPC),
 		quitChan:   make(chan struct{}, 1),
 	}
+
+	if s.RPCProcessor == nil {
+		s.RPCProcessor = s
+	}
+
+	return s
 }
 
 func (s *Server) Start() {
@@ -49,7 +62,14 @@ free:
 	for {
 		select {
 		case rpc := <-s.rpcChan:
-			fmt.Println(rpc)
+			decodedMessage, err := s.RPCDecodeFunc(rpc)
+			if err != nil {
+				logrus.Error(err)
+			}
+			if err := s.RPCProcessor.ProcessMessage(decodedMessage); err!=nil {
+				logrus.Error(err)
+			}
+
 		case <-s.quitChan:
 			break free
 		case <-ticker.C:
@@ -62,12 +82,20 @@ free:
 	fmt.Println("Server shut down")
 }
 
-func (s *Server) handleTransaction(tx *core.Transaction) error {
-	if err := tx.Verify(); err != nil {
-		return err
+func (s *Server) ProcessMessage (decodedMsg *DecodedMessage) error{
+	
+	switch t := decodedMsg.Data.(type) {
+		case *core.Transaction:
+			return s.processTransaction(t)
 	}
 
+	return nil
+}
+
+func (s *Server) processTransaction(tx *core.Transaction) error {
+
 	hash := tx.Hash(core.TxHasher{})
+
 	if s.memPool.Has(hash) {
 		logrus.WithFields(
 			logrus.Fields{
@@ -75,13 +103,41 @@ func (s *Server) handleTransaction(tx *core.Transaction) error {
 			}).Info("transaction already in mempool")
 	}
 
+	if err := tx.Verify(); err != nil {
+		return err
+	}
+
+	tx.SetFirstSeen(time.Now().UnixNano())
+
 	logrus.WithFields(logrus.Fields{
 		"hash": hash,
+		"mempool length": s.memPool.Len(),
 	}).Info("adding new tx to the mempool")
+
+	go s.broadcastTx(tx)
+	//add tx to other peers
 
 	return s.memPool.Add(tx)
 }
 
+func (s *Server)broadcast(b []byte) error{
+	for _, t := range s.Transports{
+		t.Broadcast(b)
+	}
+	return nil
+}
+
+func (s *Server) broadcastTx(tx *core.Transaction) error{
+	buf := &bytes.Buffer{}
+	err := tx.Encode(core.NewGobTxEncoder(buf))
+
+	if err != nil{
+		return err
+	}
+
+	msg := NewMessage(MessageTypeTx, buf.Bytes())
+	return s.broadcast(msg.Bytes())
+}
 
 func (s *Server) createNewBlock() error {
 	fmt.Println("creating a new block")
