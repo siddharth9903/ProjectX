@@ -3,13 +3,16 @@ package core
 import (
 	"ProjectX/types"
 	"fmt"
+	"os"
 	"testing"
 
+	"github.com/go-kit/log"
 	"github.com/stretchr/testify/assert"
 )
 
 func newBlockchainWithGenesis(t *testing.T) *Blockchain {
-	bc, err := NewBlockchain(randomBlock(0, types.Hash{}))
+	tempLogger := log.NewLogfmtLogger(os.Stderr)
+	bc, err := NewBlockchain(tempLogger, randomBlock(t, 0, types.Hash{}))
 
 	assert.Nil(t,err)
 	return bc
@@ -40,7 +43,7 @@ func TestAddBlock(t *testing.T) {
 	for i := 0; i < lenBlocks; i++ {
 		prevHash := getPreviousBlockHash(t, bc, uint32(i+1));
 
-		b := randomBlockWithSignature(t, uint32(i+1),prevHash)
+		b := randomBlock(t, uint32(i+1),prevHash)
 		err := bc.AddBlock(b);
 		assert.Nil(t, err);
 

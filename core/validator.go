@@ -37,6 +37,15 @@ func (v *BlockValidator) ValidateBlock(b *Block) error {
 		return fmt.Errorf("the hash of prev block is invalid")
 	}
 
+	dataHash,err := CalculateDataHash(b.Transactions)
+	if err != nil {
+		return err
+	}
+
+	if dataHash != b.DataHash {
+		return fmt.Errorf("block %s has invalid datahash", b.Hash(BlockHasher{}))
+	}
+
 	if err := b.Verify(); err != nil {
 		return err
 	}

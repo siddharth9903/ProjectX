@@ -4,8 +4,10 @@ import (
 	"ProjectX/crypto"
 	"ProjectX/types"
 	"bytes"
+	"crypto/sha256"
 	"encoding/gob"
 	"fmt"
+	"time"
 )
 
 type Header struct {
@@ -25,18 +27,50 @@ func (h *Header) Bytes() []byte {
 
 type Block struct {
 	*Header
-	Transactions []Transaction
+	Transactions []*Transaction
 	Validator crypto.PublicKey
 	Signature *crypto.Signature
 
 	hash types.Hash
 }
 
-func NewBlock(h *Header, txx []Transaction) *Block {
+func NewBlock(h *Header, txx []*Transaction) (*Block, error) {
 	return &Block{
 		Header : h, 
 		Transactions: txx,
+	},nil
+}
+
+func NewBlockFromPrevHeader(prevHeader *Header, txx []*Transaction) (*Block, error) {
+
+	dataHash,err := CalculateDataHash(txx)
+	if err != nil {
+		return nil, err
 	}
+
+	header := &Header{
+		Version: prevHeader.Version,
+		DataHash: dataHash,
+		PrevBlockHash: BlockHasher{}.Hash(prevHeader),
+		Timestamp: time.Now().UnixNano(),
+		Height: prevHeader.Height + 1,
+	}
+
+	return NewBlock(header, txx)
+}
+
+func CalculateDataHash(txx []*Transaction) (hash types.Hash, err error) {
+	buf := &bytes.Buffer{}
+
+	for _, tx := range txx {
+		if err = tx.Encode(NewGobTxEncoder(buf)); err != nil{
+			return
+		}
+	}
+
+	hash = sha256.Sum256(buf.Bytes())
+
+	return
 }
 
 
@@ -73,7 +107,7 @@ func (b *Block) Verify() error {
 }
 
 func (b *Block) AddTransaction(tx *Transaction) {
-	b.Transactions = append(b.Transactions, *tx);
+	b.Transactions = append(b.Transactions, tx);
 }
 
 func (b *Block) Encode(enc Encoder[*Block]) error{

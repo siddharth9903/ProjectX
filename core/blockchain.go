@@ -3,19 +3,23 @@ package core
 import (
 	"fmt"
 	"sync"
+
+	"github.com/go-kit/log"
 )
 
 type Blockchain struct {
+	logger log.Logger
 	store Storage
 	lock sync.RWMutex
 	headers []*Header
 	validator Validator
 }
 
-func NewBlockchain(genesis *Block) (*Blockchain, error) {
+func NewBlockchain(logger log.Logger,genesis *Block) (*Blockchain, error) {
 	bc := &Blockchain{
 		store : NewMemoryStore(),
 		headers : []*Header{},
+		logger : logger,
 	}
 	bc.validator = NewBlockValidator(bc)
 	bc.addBlockWithoutValidation(genesis)
@@ -48,10 +52,7 @@ func (bc *Blockchain) addBlockWithoutValidation(b *Block) error {
 	defer bc.lock.Unlock()
 	bc.headers = append(bc.headers,b.Header)
 
-	// logrus.WithFields(logrus.Fields{
-	// 	"height": b.Height, 
-	// 	"hash": b.Hash(BlockHasher{}),
-	// }).Info("adding new block")
+	bc.logger.Log("msg", "adding new block","height", b.Height, "hash", b.Hash(BlockHasher{}))
 
 	return bc.store.Put(b)
 }
