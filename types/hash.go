@@ -1,7 +1,6 @@
 package types
 
 import (
-	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 )
@@ -41,14 +40,4 @@ func HashFromBytes(b []byte) Hash{
 		value[i] = b[i]
 	}
 	return value
-}
-
-func RandomBytes(size uint) []byte {
-	token := make([]byte, size)
-	rand.Read(token)
-	return token
-}
-
-func RandomHash() Hash{
-	return HashFromBytes(RandomBytes(32))
 }
