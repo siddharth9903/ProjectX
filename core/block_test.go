@@ -3,6 +3,7 @@ package core
 import (
 	"ProjectX/crypto"
 	"ProjectX/types"
+	"bytes"
 	"fmt"
 	"testing"
 	"time"
@@ -60,4 +61,15 @@ func TestVerifyBlock(t *testing.T) {
 	assert.Nil(t, b.Sign(privKey))
 	b.Validator = anotherPrivKey.PublicKey()
 	assert.NotNil(t, b.Verify())
+}
+
+func TestEncodeDecodeBlock(t *testing.T){
+	b := randomBlock(t,0, types.Hash{})
+	buf := &bytes.Buffer{}
+	assert.Nil(t, NewGobBlockEncoder(buf).Encode(b))
+
+	decodedBlock := new(Block)
+	assert.Nil(t, NewGobBlockDecoder(buf).Decode(decodedBlock))
+
+	assert.Equal(t, b, decodedBlock)
 }
